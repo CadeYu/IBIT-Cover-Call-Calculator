@@ -142,7 +142,7 @@ if ticker:
 
                     # Format columns for display
                     # Format columns for display using Styler to keep underlying data numeric for highlighting
-                    display_cols = ['strike', 'bid', 'ask', 'delta', 'otm_pct', 'annualized_yield', 'static_return', 'premium']
+                    display_cols = ['strike', 'bid', 'ask', 'last_price', 'delta', 'otm_pct', 'annualized_yield', 'static_return', 'premium']
                     display_df = df[display_cols].copy()
                     
                     styler = display_df.style.apply(highlight_risky, axis=1).format({
@@ -153,7 +153,8 @@ if ticker:
                         'premium': '${:.2f}',
                         'strike': '${:.2f}',
                         'bid': '${:.2f}',
-                        'ask': '${:.2f}'
+                        'ask': '${:.2f}',
+                        'last_price': '${:.2f}'
                     })
 
                     st.dataframe(styler, use_container_width=True)

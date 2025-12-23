@@ -111,6 +111,7 @@ def calculate_metrics(calls_df, current_price, expiration_date, risk_free_rate=0
             'premium': premium,
             'bid': bid,
             'ask': ask,
+            'last_price': last_price,
             'volume': row['volume'],
             'openInterest': row['openInterest'],
             'impliedVolatility': row['impliedVolatility'],
