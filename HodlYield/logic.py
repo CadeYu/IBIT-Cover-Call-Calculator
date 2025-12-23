@@ -90,22 +90,45 @@ def calculate_metrics(calls_df, current_price, expiration_date, risk_free_rate=0
         otm_pct = (strike - current_price) / current_price
         
         # 3. Greeks Calculation using mibian (Black-Scholes)
-        # BS([Underlying Price], [Strike Price], [Interest Rate %], [Days to Expiration])
-        # We need IV. yfinance provides 'impliedVolatility'
-        iv = row['impliedVolatility'] * 100 # mibian expects percentage e.g. 20 not 0.2
+        # We try to calculate Implied Volatility (IV) from our Premium first.
+        # This is more robust than relying on Yahoo's 'impliedVolatility' which is often 0 for illiquid options.
+        
+        calculated_iv = np.nan
+        try:
+            # Only calculate if we have a valid premium and option implies some time value
+            # Intrinsic value check: Premium must be > Intrinsic for valid IV
+            intrinsic_value = max(0, current_price - strike)
+            if premium > intrinsic_value:
+                 # mibian expects percentage for volatility, but when solving for IV, it returns percentage
+                 c_iv = mibian.BS([current_price, strike, risk_free_rate*100, days_to_exp], callPrice=premium)
+                 calculated_iv = c_iv.impliedVolatility
+        except:
+             pass
+        
+        # Determine Final IV: Use calculated if valid, else Yahoo's, else fallback
+        yahoo_iv = row['impliedVolatility'] * 100
+        final_iv = yahoo_iv
+        
+        if not np.isnan(calculated_iv) and calculated_iv > 0:
+             final_iv = calculated_iv
         
         delta = np.nan
         prob_itm = np.nan
         
         try:
-            c = mibian.BS([current_price, strike, risk_free_rate*100, days_to_exp], volatility=iv)
+            # mibian expects volatility as percentage (e.g. 50 for 50%)
+            c = mibian.BS([current_price, strike, risk_free_rate*100, days_to_exp], volatility=final_iv)
             delta = c.callDelta
-            # Approximate Prob ITM ~ Delta (roughly) or N(d2). mibian doesn't strictly output prob ITM directly as a named property typically used like this, 
-            # but Delta is the market standard proxy for ITM probability for calls.
             prob_itm = delta 
         except:
-            pass
-            
+            # Fallback if model fails: Estimate based on Moneyness
+            # If Deep ITM -> 1.0, Deep OTM -> 0.0
+            if current_price > strike:
+                delta = 1.0
+            else:
+                delta = 0.0
+            prob_itm = delta
+
         results.append({
             'strike': strike,
             'premium': premium,
@@ -114,7 +137,7 @@ def calculate_metrics(calls_df, current_price, expiration_date, risk_free_rate=0
             'last_price': last_price,
             'volume': row['volume'],
             'openInterest': row['openInterest'],
-            'impliedVolatility': row['impliedVolatility'],
+            'impliedVolatility': final_iv, # Store the actually used IV
             'annualized_yield': annualized_yield,
             'static_return': static_return,
             'days_to_exp': days_to_exp,
