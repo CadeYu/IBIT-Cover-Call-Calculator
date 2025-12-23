@@ -17,6 +17,23 @@ st.sidebar.subheader("Strategy Parameters")
 max_delta = st.sidebar.slider("Max Delta (Risk)", 0.0, 1.0, 0.30, help="Delta approximates the probability of the option expiring ITM (Getting assigned). Bitcoin Maxis usually prefer < 0.3")
 min_yield = st.sidebar.slider("Min Annualized Yield (%)", 0.0, 50.0, 5.0)
 
+# --- Caching Wrappers ---
+@st.cache_data(ttl=60) # Cache price for 1 minute
+def cached_get_current_price(t):
+    return get_current_price(t)
+
+@st.cache_data(ttl=3600) # Cache dates for 1 hour
+def cached_get_option_dates(t):
+    return get_option_dates(t)
+
+@st.cache_data(ttl=300) # Cache chain for 5 minutes
+def cached_get_option_chain(t, d):
+    return get_option_chain(t, d)
+
+@st.cache_data(ttl=86400) # Risk free rate rarely changes
+def cached_get_risk_free_rate():
+    return get_risk_free_rate()
+
 # --- Main Logic ---
 st.info("ℹ️ **数据来源**: 本工具使用 Yahoo Finance 数据，对应美国主流期权交易所 (如 CBOE, Nasdaq) 的 IBIT 期权市场。")
 
@@ -43,7 +60,7 @@ if ticker:
     st.write(f"正在加载数据: {ticker}...") # Immediate feedback
     try:
         with st.spinner(f"正在获取 {ticker} 实时价格..."):
-            current_price = get_current_price(ticker)
+            current_price = cached_get_current_price(ticker)
         
         if current_price == 0:
              st.error(f"无法获取 {ticker} 价格。请检查代码是否正确或网络连接。")
@@ -51,7 +68,7 @@ if ticker:
             st.metric("Current Price (当前价格)", f"${current_price:.2f}")
             
             with st.spinner("正在获取期权链日期..."):
-                dates = get_option_dates(ticker)
+                dates = cached_get_option_dates(ticker)
                 
             if not dates:
                 st.warning("未找到期权数据 (No option chain data found).")
@@ -60,8 +77,8 @@ if ticker:
                 
                 if selected_date:
                     with st.spinner("Fetching Option Chain & Calculating Greeks..."):
-                        calls = get_option_chain(ticker, selected_date)
-                        risk_free = get_risk_free_rate()
+                        calls = cached_get_option_chain(ticker, selected_date)
+                        risk_free = cached_get_risk_free_rate()
                         df = calculate_metrics(calls, current_price, selected_date, risk_free)
                         
                         # --- Filters ---

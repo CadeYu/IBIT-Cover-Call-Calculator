@@ -49,6 +49,22 @@
 
 5.  打开浏览器访问 [http://localhost:8501](http://localhost:8501)
 
+## ☁️ 免费部署 (Deploy)
+
+您可以直接将本项目免费部署到 **Streamlit Community Cloud**，生成一个类似 `https://your-project.streamlit.app` 的网址分享给朋友。
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://streamlit.io/cloud)
+
+### 部署步骤：
+1.  **Fork** 本项目到您的 GitHub 账号。
+2.  登录 [Streamlit Community Cloud](https://share.streamlit.io/) (使用 GitHub 登录)。
+3.  点击 **"New app"**。
+4.  选择刚刚 Fork 的仓库 `HodlYield`。
+5.  **关键设置**:
+    - **Main file path**: 输入 `HodlYield/app.py` (注意：因为代码在子文件夹里)。
+6.  点击 **"Deploy!"**。
+7.  等待几分钟，您的专属链接就生成了！
+
 ## 📊 使用指南
 
 1.  **Ticker**: 默认为 `IBIT`。
