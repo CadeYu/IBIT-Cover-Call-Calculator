@@ -17,6 +17,10 @@ st.sidebar.subheader("Strategy Parameters")
 max_delta = st.sidebar.slider("Max Delta (Risk)", 0.0, 1.0, 0.30, help="Delta approximates the probability of the option expiring ITM (Getting assigned). Bitcoin Maxis usually prefer < 0.3")
 min_yield = st.sidebar.slider("Min Annualized Yield (%)", 0.0, 50.0, 5.0)
 
+if st.sidebar.button("🧹 Clear Date Cache"):
+    st.cache_data.clear()
+    st.rerun()
+
 # --- Caching Wrappers ---
 @st.cache_data(ttl=60) # Cache price for 1 minute
 def cached_get_current_price(t):
@@ -90,31 +94,34 @@ if ticker:
                     st.markdown("Select the 'Top Left' candidates: **Low Risk (Low Delta), High Yield**")
                     
                     # Filter for plot based on sidebar
-                    plot_df = df[df['delta'] <= 1.0] # Just basic cleanup
+                    plot_df = df[(df['delta'] <= 1.0) & (df['premium'] > 0)] # Filter out invalid/zero price data
                     
-                    fig = px.scatter(
-                        plot_df,
-                        x="delta",
-                        y="annualized_yield",
-                        size="premium",
-                        color="otm_pct",
-                        hover_data=["strike", "premium", "static_return"],
-                        labels={
-                            "delta": "Risk (Delta / Prob ITM)",
-                            "annualized_yield": "Annualized Yield (%)",
-                            "otm_pct": "OTM %"
-                        },
-                        title=f"Yield vs. Risk (Delta) for {selected_date}",
-                        color_continuous_scale="Viridis"
-                    )
-                    # Reverse X axis so "Safer" (Low Delta) is on the Left? 
-                    # Actually standard is 0 to 1. 0 on left is intuitive "Low Risk".
-                    fig.update_layout(xaxis_range=[0, 1.0])
-                    
-                    # Add a vertical line for User's Max Delta
-                    fig.add_vline(x=max_delta, line_dash="dash", line_color="red", annotation_text="Max Risk Limit")
-                    
-                    st.plotly_chart(fig, use_container_width=True)
+                    if plot_df.empty:
+                        st.warning("⚠️ 该到期日的所有期权都没有报价 (权利金为 0)，无法绘制图表。这通常是因为该日期流动性太差。请尝试选择其他日期。")
+                    else:
+                        fig = px.scatter(
+                            plot_df,
+                            x="delta",
+                            y="annualized_yield",
+                            size="premium",
+                            color="otm_pct",
+                            hover_data=["strike", "premium", "static_return"],
+                            labels={
+                                "delta": "Risk (Delta / Prob ITM)",
+                                "annualized_yield": "Annualized Yield (%)",
+                                "otm_pct": "OTM %"
+                            },
+                            title=f"Yield vs. Risk (Delta) for {selected_date}",
+                            color_continuous_scale="Viridis"
+                        )
+                        # Reverse X axis so "Safer" (Low Delta) is on the Left? 
+                        # Actually standard is 0 to 1. 0 on left is intuitive "Low Risk".
+                        fig.update_layout(xaxis_range=[0, 1.0])
+                        
+                        # Add a vertical line for User's Max Delta
+                        fig.add_vline(x=max_delta, line_dash="dash", line_color="red", annotation_text="Max Risk Limit")
+                        
+                        st.plotly_chart(fig, use_container_width=True)
 
                     # --- Data Table ---
                     st.subheader("Detailed Option Chain")

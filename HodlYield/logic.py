@@ -60,8 +60,23 @@ def calculate_metrics(calls_df, current_price, expiration_date, risk_free_rate=0
         strike = row['strike']
         bid = row['bid']
         ask = row['ask']
-        # Use mid price for calculation, or bid if conservative
-        premium = (bid + ask) / 2
+        last_price = row.get('lastPrice', 0.0)
+        
+        # Premium Calculation Logic
+        # 1. Best case: Mid price
+        if bid > 0 and ask > 0:
+            premium = (bid + ask) / 2
+        # 2. Fallback: If only one side exists (rare but possible)
+        elif bid > 0:
+            premium = bid
+        elif ask > 0:
+            premium = ask
+        # 3. Last Resort: Use last traded price (lastPrice)
+        # Note: This might be stale, but better than 0 for visualization
+        elif last_price > 0:
+            premium = last_price
+        else:
+            premium = 0.0
         
         # 1. Annualized Yield Calculation
         # Yield = (Premium / Strike) * (365 / DTE)
